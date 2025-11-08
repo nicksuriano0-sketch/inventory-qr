@@ -3,12 +3,6 @@ from supabase import create_client
 from dotenv import load_dotenv
 import os
 
-from dotenv import load_dotenv
-import os
-
-# Load .env locally; on Render this does nothing but is harmless
-load_dotenv()
-
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 RENDER_URL = os.getenv("RENDER_URL")# -----------------------------
