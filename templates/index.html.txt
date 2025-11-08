@@ -1,43 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Inventory Dashboard</title>
-    <style>
-        body { font-family: Arial; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background: #f0f0f0; }
-        img { width: 80px; height: 80px; }
-        a.button { padding: 5px 10px; background: #007bff; color: #fff; text-decoration: none; border-radius: 4px; }
-    </style>
+    <title>Inventory</title>
 </head>
 <body>
-    <h1>Inventory Dashboard</h1>
-    <a href="{{ url_for('add_item') }}" class="button">Add Item</a>
-    <a href="{{ url_for('logout') }}" class="button">Logout</a>
-
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Qty</th>
-            <th>QR</th>
-            <th>Actions</th>
-        </tr>
-        {% for item in fittings %}
-        <tr>
-            <td>{{ item.name }}</td>
-            <td>{{ item.category }}</td>
-            <td>{{ item.qty }}</td>
-            <td><img src="data:image/png;base64,{{ item.qr_base64 }}"></td>
-            <td>
-                <a href="{{ url_for('update_qty', item_id=item.id, action='plus') }}">+</a>
-                <a href="{{ url_for('update_qty', item_id=item.id, action='minus') }}">-</a>
-                <a href="{{ url_for('edit_item', item_id=item.id) }}">Edit</a>
-                <a href="{{ url_for('delete_item', item_id=item.id) }}">Delete</a>
-            </td>
-        </tr>
+    <h1>Fittings</h1>
+    <a href="/add_item">Add Item</a> | <a href="/login">Login</a> | <a href="/signup">Sign Up</a>
+    <ul>
+        {% for fitting in fittings %}
+        <li>
+            {{ fitting.name }} ({{ fitting.category }})
+            <br>
+            <img src="data:image/png;base64,{{ fitting.qr_code }}">
+        </li>
         {% endfor %}
-    </table>
+    </ul>
 </body>
 </html>
