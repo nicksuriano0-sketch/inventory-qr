@@ -1,19 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Add New Fitting</h2>
-<form method="POST" class="card p-3 shadow-sm">
+<h2 class="mb-3">Add New Fitting</h2>
+<form method="post" class="bg-white p-3 rounded shadow-sm">
   <div class="mb-3">
-    <label>Item Name</label>
-    <input type="text" name="name" class="form-control" required>
+    <label class="form-label">Name</label>
+    <input class="form-control" name="name" required>
   </div>
   <div class="mb-3">
-    <label>Category</label>
-    <select name="category" class="form-select">
-        <option value="Copper">Copper</option>
-        <option value="Brass">Brass</option>
-        <option value="PVC">PVC</option>
+    <label class="form-label">Category</label>
+    <select class="form-select" name="category">
+      <option value="Copper">Copper</option>
+      <option value="Brass">Brass</option>
+      <option value="PVC">PVC</option>
     </select>
   </div>
-  <button type="submit" class="btn btn-success">Add Item</button>
+  <button class="btn btn-success">Add Item</button>
+  <a href="{{ url_for('index') }}" class="btn btn-link">Cancel</a>
 </form>
 {% endblock %}

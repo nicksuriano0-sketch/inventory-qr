@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Scanned Item</h2>
-<div class="card p-3">
-  <p><strong>Name:</strong> {{ item.name }}</p>
-  <p><strong>Category:</strong> {{ item.category }}</p>
-  <img src="data:image/png;base64,{{ item.qr_code }}" width="150">
+<h2 class="mb-3">Scanned Item</h2>
+<div class="bg-white p-3 rounded shadow-sm">
+  <div class="mb-2"><strong>Name:</strong> {{ item.name }}</div>
+  <div class="mb-3"><strong>Category:</strong> {{ item.category }}</div>
+  {% if item.qr_code %}
+    <img src="data:image/png;base64,{{ item.qr_code }}" alt="QR" style="width:150px;height:auto;">
+  {% endif %}
 </div>
+<a href="{{ url_for('index') }}" class="btn btn-link mt-3">Back</a>
 {% endblock %}
