@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
 from supabase import create_client
-from dotenv import load_dotenv
 import os
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -79,7 +78,7 @@ def delete_fitting(id):
 @app.route("/scan")
 def scan_page():
     """QR Scan page"""
-    qr_link = f"{RENDER_URL}/scan"
+    qr_link = f"{RENDER_URL}/scan/{item_id}"
     return render_template("scan.html", qr_link=qr_link)
 
 
