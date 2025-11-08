@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 # app.py
+from supabase import create_client
+import os
+
+SUPABASE_URL = os.getenv("https://hwsltnbxalbsjzqrbrwq.supabase.co")
+SUPABASE_KEY = os.getenv("process.env.SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 from flask import Flask, render_template_string, request, redirect, url_for, session, send_from_directory
 import sqlite3, os, qrcode
 from werkzeug.security import generate_password_hash, check_password_hash

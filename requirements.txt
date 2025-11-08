@@ -2,3 +2,4 @@ Flask
 qrcode[pil]
 Werkzeug
 gunicorn
+supabase
