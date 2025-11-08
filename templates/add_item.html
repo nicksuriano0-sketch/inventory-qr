@@ -1,22 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Item</title>
-</head>
-<body>
-    <h1>Add Item</h1>
-    <form method="post">
-        <label>Name: <input type="text" name="name" required></label><br><br>
-        <label>Category: 
-            <select name="category" required>
-                <option value="Copper">Copper</option>
-                <option value="Brass">Brass</option>
-                <option value="PVC">PVC</option>
-            </select>
-        </label><br><br>
-        <label>Quantity: <input type="number" name="qty" required min="0"></label><br><br>
-        <input type="submit" value="Add Item">
-    </form>
-    <a href="{{ url_for('index') }}">Back to Dashboard</a>
-</body>
-</html>
+{% extends "base.html" %}
+{% block content %}
+<h2>Add New Fitting</h2>
+<form method="POST" class="card p-3 shadow-sm">
+  <div class="mb-3">
+    <label>Item Name</label>
+    <input type="text" name="name" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Category</label>
+    <select name="category" class="form-select">
+        <option value="Copper">Copper</option>
+        <option value="Brass">Brass</option>
+        <option value="PVC">PVC</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-success">Add Item</button>
+</form>
+{% endblock %}
