@@ -2,4 +2,4 @@ Flask
 qrcode[pil]
 Werkzeug
 gunicorn
-supabase-py @ git+https://github.com/supabase/supabase-py.git
+supabase-py
