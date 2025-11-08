@@ -3,17 +3,15 @@ from supabase import create_client
 from dotenv import load_dotenv
 import os
 
-# -----------------------------
-# 1️⃣ Load environment variables
-# -----------------------------
+from dotenv import load_dotenv
+import os
+
+# Load .env locally; on Render this does nothing but is harmless
 load_dotenv()
 
-# Use environment variables, or defaults for local testing
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://hwsltnbxalbsjzqrbrwq.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_qoHmkKoKRWqJDVpnuW0qNA_7563V8Zb")
-RENDER_URL = os.getenv("RENDER_URL", "https://inventory-app-edca60a.onrender.com")
-
-# -----------------------------
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+RENDER_URL = os.getenv("RENDER_URL")# -----------------------------
 # 2️⃣ Initialize Flask + Supabase
 # -----------------------------
 app = Flask(__name__)
