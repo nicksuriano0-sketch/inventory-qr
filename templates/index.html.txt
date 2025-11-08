@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-5">
+    <div class="container">
+        <h1 class="text-center mb-4">🚚 Plumbing Fittings Inventory</h1>
+
+        <form action="/add" method="POST" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="name" class="form-control" placeholder="Fitting name" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" name="category" class="form-control" placeholder="Category (Copper, Brass, PVC)" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" name="qty" class="form-control" placeholder="Qty" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Add</button>
+                </div>
+            </div>
+        </form>
+
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in fittings %}
+                <tr>
+                    <td>{{ f.id }}</td>
+                    <td>{{ f.name }}</td>
+                    <td>{{ f.category }}</td>
+                    <td>{{ f.qty }}</td>
+                    <td>
+                        <form action="/edit/{{ f.id }}" method="POST" class="d-inline">
+                            <input type="text" name="name" value="{{ f.name }}" class="form-control form-control-sm d-inline w-auto">
+                            <input type="text" name="category" value="{{ f.category }}" class="form-control form-control-sm d-inline w-auto">
+                            <input type="number" name="qty" value="{{ f.qty }}" class="form-control form-control-sm d-inline w-auto">
+                            <button type="submit" class="btn btn-sm btn-success">💾</button>
+                        </form>
+                        <a href="/delete/{{ f.id }}" class="btn btn-sm btn-danger">🗑️</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="text-center mt-4">
+            <a href="/scan" class="btn btn-secondary">📱 QR Scan Page</a>
+        </div>
+    </div>
+</body>
+</html>
