@@ -1,20 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="mb-3">Edit Fitting</h2>
-<form method="post" class="bg-white p-3 rounded shadow-sm">
-  <div class="mb-3">
-    <label class="form-label">Name</label>
-    <input class="form-control" name="name" value="{{ item.name }}" required>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Category</label>
-    <select class="form-select" name="category">
-      <option value="Copper" {% if item.category=='Copper' %}selected{% endif %}>Copper</option>
-      <option value="Brass"  {% if item.category=='Brass'  %}selected{% endif %}>Brass</option>
-      <option value="PVC"    {% if item.category=='PVC'    %}selected{% endif %}>PVC</option>
-    </select>
-  </div>
-  <button class="btn btn-primary">Save Changes</button>
-  <a href="{{ url_for('index') }}" class="btn btn-link">Cancel</a>
-</form>
+<div class="container mt-4">
+  <h2>Edit Item</h2>
+  <form method="POST">
+    <div class="mb-3">
+      <label for="name" class="form-label">Name</label>
+      <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
+    </div>
+    <div class="mb-3">
+      <label for="category" class="form-label">Category</label>
+      <input type="text" name="category" class="form-control" value="{{ item.category }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
 {% endblock %}

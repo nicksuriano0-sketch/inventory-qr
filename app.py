@@ -98,6 +98,28 @@ def add_item():
             flash(f"Error adding item: {e}", "danger")
     return render_template("add_item.html")
 
+@app.route("/edit_item/<name>", methods=["GET", "POST"])
+def edit_item(name):
+    # Load the existing item
+    result = supabase.table("fittings").select("*").eq("name", name).execute()
+    if not result.data:
+        return f"Item {name} not found", 404
+    item = result.data[0]
+
+    if request.method == "POST":
+        new_name = request.form["name"]
+        category = request.form["category"]
+
+        supabase.table("fittings").update({
+            "name": new_name,
+            "category": category
+        }).eq("id", item["id"]).execute()
+
+        flash("Item updated!")
+        return redirect(url_for("index"))
+
+    return render_template("edit_item.html", item=item)
+
 
 @app.route("/scan/<item_name>")
 def scan(item_name):
