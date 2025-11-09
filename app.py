@@ -3,51 +3,68 @@ from supabase import create_client
 import qrcode
 import base64
 from io import BytesIO
+import os
+from collections import defaultdict
 
-# --- Configuration ---
+# ========= Config (edit these 3 if needed) =========
 SUPABASE_URL = "https://hwsltnbxalbsjzqrbrwq.supabase.co"
 SUPABASE_KEY = "sb_publishable_qoHmkKoKRWqJDVpnuW0qNA_7563V8Zb"
-ADMIN_EMAIL = "nicksuriano0@gmail.com"  # 👈 your admin email
-RENDER_URL = "https://inventory-qr-aatq.onrender.com"
+RENDER_URL    = "https://inventory-qr-aatq.onrender.com"   # public URL used inside QR codes
+ADMIN_EMAIL   = "nicksuriano0@gmail.com"                   # admin login email
 
-# --- Flask App Setup ---
+# ========= Flask / Supabase =========
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # ⚠️ replace later with a strong secret
+app.secret_key = "supersecretkey_change_me"
 
-# --- Supabase Client ---
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-# ========== ROUTES ==========
+# ========= Helpers =========
+def current_email() -> str | None:
+    return session.get("email")
 
+def is_authed() -> bool:
+    return "user" in session and "email" in session
+
+def is_admin() -> bool:
+    return bool(session.get("is_admin"))
+
+
+# ========= Pages =========
 @app.route("/")
 def index():
-    """Show current user's fittings or all if admin."""
+    # Redirect if not logged in
     if "user" not in session:
         return redirect(url_for("login"))
 
-    email = session.get("email")
-    if session.get("is_admin"):
-        fittings = supabase.table("fittings").select("*").execute().data
-    else:
-        fittings = (
-            supabase.table("user_stock")
-            .select("*, fittings(name, category)")
-            .eq("user_email", email)
-            .execute()
-            .data
-        )
+    user_email = session.get("email")
+
+    # Fetch all fittings
+    fittings_response = supabase.table("fittings").select("*").execute()
+    fittings = fittings_response.data or []
+
+    # Fetch this user's stock
+    user_stock_response = (
+        supabase.table("user_stock")
+        .select("fitting_id, quantity")
+        .eq("user_email", user_email)
+        .execute()
+    )
+    user_stock = {u["fitting_id"]: u["quantity"] for u in user_stock_response.data or []}
+
+    # Merge data — show user quantity or 0
+    for f in fittings:
+        f["quantity"] = user_stock.get(f["id"], 0)
 
     return render_template("index.html", fittings=fittings)
 
 
-# --- AUTH ROUTES ---
 
+# ========= Auth =========
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
-    """Register a new user."""
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip()
         password = request.form["password"]
         try:
             supabase.auth.sign_up({"email": email, "password": password})
@@ -60,65 +77,69 @@ def signup():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """Log in existing users (redirects admin automatically)."""
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip()
         password = request.form["password"]
         try:
-            response = supabase.auth.sign_in_with_password(
-                {"email": email, "password": password}
-            )
-            if response.user:
-                session["user"] = response.user.id
+            res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            if getattr(res, "user", None):
+                session["user"] = res.user.id
                 session["email"] = email
-                session["is_admin"] = email.lower() == ADMIN_EMAIL.lower()
-                flash("Login successful!", "success")
+                session["is_admin"] = (email.lower() == ADMIN_EMAIL.lower())
+
+                # make sure this user exists in public.users (handy in case trigger didn't run locally)
+                try:
+                    supabase.table("users").upsert(
+                        {"id": res.user.id, "email": email},
+                        on_conflict="id"
+                    ).execute()
+                except Exception:
+                    pass
 
                 if session["is_admin"]:
+                    flash("Welcome, admin!", "success")
                     return redirect(url_for("admin_dashboard"))
-                else:
-                    return redirect(url_for("index"))
+                flash("Login successful.", "success")
+                return redirect(url_for("index"))
             else:
-                flash("Login failed", "danger")
+                flash("Login failed.", "danger")
         except Exception as e:
             flash(f"Login error: {e}", "danger")
-
     return render_template("login.html")
 
 
 @app.route("/logout")
 def logout():
-    """Log out user."""
     session.clear()
-    flash("You’ve been logged out.", "info")
+    flash("Logged out.", "info")
     return redirect(url_for("login"))
 
 
-# --- INVENTORY MANAGEMENT ---
-
+# ========= Fittings (catalog) =========
 @app.route("/add_item", methods=["GET", "POST"])
 def add_item():
-    """Admin adds a new fitting type."""
-    if "user" not in session:
+    if not is_authed():
         return redirect(url_for("login"))
+    if not is_admin():
+        flash("Only admin can add items.", "danger")
+        return redirect(url_for("index"))
 
     if request.method == "POST":
-        name = request.form["name"]
-        category = request.form["category"]
+        name = request.form["name"].strip()
+        category = request.form["category"].strip()
 
         try:
-            # Create QR code
+            # Build QR code pointing to the scan endpoint
             qr_url = f"{RENDER_URL}/scan/{name}"
-            qr_img = qrcode.make(qr_url)
-            buffer = BytesIO()
-            qr_img.save(buffer, format="PNG")
-            qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+            img = qrcode.make(qr_url)
+            buf = BytesIO()
+            img.save(buf, format="PNG")
+            qr_b64 = base64.b64encode(buf.getvalue()).decode()
 
             supabase.table("fittings").insert(
-                {"name": name, "category": category, "qr_code": qr_base64}
+                {"name": name, "category": category, "qr_code": qr_b64}
             ).execute()
-
-            flash("Item added successfully!", "success")
+            flash("Item added.", "success")
             return redirect(url_for("index"))
         except Exception as e:
             flash(f"Error adding item: {e}", "danger")
@@ -126,20 +147,27 @@ def add_item():
     return render_template("add_item.html")
 
 
+# ========= Scanning / Per-user quantities =========
 @app.route("/scan/<item_name>")
 def scan(item_name):
-    """QR code scan endpoint."""
-    email = session.get("email", "Guest")
+    """
+    When a QR is scanned:
+      - ensure a user_stock row exists for (current_user, item_name)
+      - show the plus/minus UI with current quantity
+    """
+    if not is_authed():
+        # you could allow anonymous here, but quantities are user-specific
+        return redirect(url_for("login"))
 
-    # Get fitting
-    fitting = (
-        supabase.table("fittings").select("*").eq("name", item_name).execute().data
-    )
-    if not fitting:
-        return f"Item '{item_name}' not found."
+    email = current_email()
 
-    # Get or create user stock record
-    stock = (
+    # Ensure fitting exists (mainly for nicer errors)
+    fit = supabase.table("fittings").select("name").eq("name", item_name).execute().data
+    if not fit:
+        return f"Item '{item_name}' not found.", 404
+
+    # Get or create a row in user_stock
+    row = (
         supabase.table("user_stock")
         .select("*")
         .eq("user_email", email)
@@ -147,29 +175,27 @@ def scan(item_name):
         .execute()
         .data
     )
-
-    if not stock:
+    if not row:
         supabase.table("user_stock").insert(
             {"user_email": email, "fitting_name": item_name, "quantity": 0}
         ).execute()
-        quantity = 0
+        qty = 0
     else:
-        quantity = stock[0]["quantity"]
+        qty = row[0].get("quantity", 0)
 
-    return render_template("scan.html", name=item_name, quantity=quantity)
+    return render_template("scan.html", name=item_name, quantity=qty)
 
 
 @app.route("/update_quantity", methods=["POST"])
 def update_quantity():
-    """Update user stock quantity via scan page."""
-    if "user" not in session:
+    if not is_authed():
         return redirect(url_for("login"))
 
-    email = session["email"]
+    email = current_email()
     name = request.form["name"]
-    action = request.form["action"]
+    action = request.form["action"]  # "plus" or "minus"
 
-    stock = (
+    row = (
         supabase.table("user_stock")
         .select("*")
         .eq("user_email", email)
@@ -178,9 +204,9 @@ def update_quantity():
         .data
     )
 
-    if stock:
-        quantity = stock[0]["quantity"]
-        new_qty = quantity + 1 if action == "plus" else max(quantity - 1, 0)
+    if row:
+        qty = int(row[0].get("quantity", 0))
+        new_qty = qty + 1 if action == "plus" else max(qty - 1, 0)
         supabase.table("user_stock").update({"quantity": new_qty}).eq(
             "user_email", email
         ).eq("fitting_name", name).execute()
@@ -193,38 +219,69 @@ def update_quantity():
     return redirect(url_for("scan", item_name=name))
 
 
-# --- ADMIN DASHBOARD ---
-
+# ========= Admin dashboard =========
 @app.route("/admin")
 def admin_dashboard():
-    """Admin overview page."""
-    if not session.get("is_admin"):
+    if not is_authed() or not is_admin():
         flash("Access denied.", "danger")
         return redirect(url_for("index"))
 
-    users = supabase.table("users").select("*").execute().data
+    # fetch all users
+    users = supabase.table("users").select("id, email, is_admin").execute().data or []
+
+    # fetch all stock rows and aggregate totals per user_email
+    totals = defaultdict(int)
+    rows = supabase.table("user_stock").select("user_email, quantity").execute().data or []
+    for r in rows:
+        totals[r["user_email"]] += int(r.get("quantity", 0))
+
+    # attach total to each user (by matching email)
+    for u in users:
+        u["total_quantity"] = totals.get(u.get("email", ""), 0)
+
+    # sort: admins first, then by email
+    users.sort(key=lambda u: (not u.get("is_admin", False), u.get("email", "")))
+
     return render_template("admin_dashboard.html", users=users)
 
 
-@app.route("/admin/view_user_stock/<email>")
-def view_user_stock(email):
-    """Admin view a specific user's inventory."""
-    if not session.get("is_admin"):
+@app.route("/admin/user/<email>")
+def admin_user_stock(email):
+    if not is_authed() or not is_admin():
+        flash("Access denied.", "danger")
         return redirect(url_for("index"))
 
-    stock = (
+    # rows for this user
+    rows = (
         supabase.table("user_stock")
-        .select("*, fittings(name, category)")
+        .select("fitting_name, quantity")
         .eq("user_email", email)
         .execute()
         .data
+        or []
     )
 
-    return render_template("view_user_stock.html", email=email, stock=stock)
+    # get categories for display
+    names = [r["fitting_name"] for r in rows]
+    categories = {}
+    if names:
+        fits = supabase.table("fittings").select("name, category").execute().data or []
+        categories = {f["name"]: f.get("category", "") for f in fits}
+
+    stock = [
+        {
+            "name": r["fitting_name"],
+            "category": categories.get(r["fitting_name"], ""),
+            "quantity": r["quantity"],
+        }
+        for r in rows
+    ]
+
+    total = sum(int(i["quantity"]) for i in stock)
+    return render_template("view_user_stock.html", email=email, stock=stock, total=total)
 
 
-import os
-
+# ========= Run (Render-friendly) =========
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
