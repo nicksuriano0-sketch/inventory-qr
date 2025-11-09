@@ -152,6 +152,37 @@ def update_quantity():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# --- Admin Routes ---
+@app.route("/admin")
+def admin_dashboard():
+    if "user" not in session:
+        return redirect(url_for("login"))
+
+    # Check if current user is admin
+    user_info = supabase.auth.get_user(session["user"])
+    if not user_info or user_info.user.email != "nicksuriano0@gmail.com":
+        flash("Access denied.")
+        return redirect(url_for("index"))
+
+    # Get list of users
+    users = supabase.table("users").select("id, email").execute().data
+    return render_template("admin_dashboard.html", users=users)
+
+
+@app.route("/admin/user/<user_id>")
+def admin_user_stock(user_id):
+    if "user" not in session:
+        return redirect(url_for("login"))
+
+    user_info = supabase.auth.get_user(session["user"])
+    if not user_info or user_info.user.email != "nicksuriano0@gmail.com":
+        flash("Access denied.")
+        return redirect(url_for("index"))
+
+    # Fetch user’s stock joined with fittings
+    stock_data = supabase.rpc("get_user_stock_with_fittings", {"uid": user_id}).execute().data
+    return render_template("admin_user_stock.html", stock=stock_data)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
