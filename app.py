@@ -31,8 +31,19 @@ def index():
     if not user_id:
         return redirect(url_for("login"))
 
-    fittings = supabase.table("fittings").select("*").execute().data
+    # Fetch all fittings
+    fittings = supabase.table("fittings").select("id, name, category").execute().data or []
+
+    # Fetch user's quantities
+    user_stock = supabase.table("user_stock").select("fitting_id, quantity").eq("user_id", user_id).execute().data or []
+    stock_lookup = {s["fitting_id"]: s["quantity"] for s in user_stock}
+
+    # Merge quantity into fittings
+    for f in fittings:
+        f["quantity"] = stock_lookup.get(f["id"], 0)
+
     return render_template("index.html", fittings=fittings)
+
 
 
 @app.route("/signup", methods=["GET", "POST"])
