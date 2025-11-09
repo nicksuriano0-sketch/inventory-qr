@@ -148,76 +148,53 @@ def add_item():
 
 
 # ========= Scanning / Per-user quantities =========
-@app.route("/scan/<item_name>")
+@app.route("/scan/<item_name>", methods=["GET", "POST"])
 def scan(item_name):
-    """
-    When a QR is scanned:
-      - ensure a user_stock row exists for (current_user, item_name)
-      - show the plus/minus UI with current quantity
-    """
-    if not is_authed():
-        # you could allow anonymous here, but quantities are user-specific
+    if "user" not in session:
         return redirect(url_for("login"))
 
-    email = current_email()
+    user_email = session.get("email")
 
-    # Ensure fitting exists (mainly for nicer errors)
-    fit = supabase.table("fittings").select("name").eq("name", item_name).execute().data
-    if not fit:
-        return f"Item '{item_name}' not found.", 404
+    # Fetch fitting
+    fitting_resp = supabase.table("fittings").select("*").eq("name", item_name).execute()
+    if not fitting_resp.data:
+        flash("Item not found.")
+        return redirect(url_for("index"))
+    fitting = fitting_resp.data[0]
+    fitting_id = fitting["id"]
 
-    # Get or create a row in user_stock
-    row = (
+    # Get or initialize user's stock entry
+    user_stock_resp = (
         supabase.table("user_stock")
         .select("*")
-        .eq("user_email", email)
-        .eq("fitting_name", item_name)
+        .eq("fitting_id", fitting_id)
+        .eq("user_email", user_email)
         .execute()
-        .data
-    )
-    if not row:
-        supabase.table("user_stock").insert(
-            {"user_email": email, "fitting_name": item_name, "quantity": 0}
-        ).execute()
-        qty = 0
-    else:
-        qty = row[0].get("quantity", 0)
-
-    return render_template("scan.html", name=item_name, quantity=qty)
-
-
-@app.route("/update_quantity", methods=["POST"])
-def update_quantity():
-    if not is_authed():
-        return redirect(url_for("login"))
-
-    email = current_email()
-    name = request.form["name"]
-    action = request.form["action"]  # "plus" or "minus"
-
-    row = (
-        supabase.table("user_stock")
-        .select("*")
-        .eq("user_email", email)
-        .eq("fitting_name", name)
-        .execute()
-        .data
     )
 
-    if row:
-        qty = int(row[0].get("quantity", 0))
-        new_qty = qty + 1 if action == "plus" else max(qty - 1, 0)
-        supabase.table("user_stock").update({"quantity": new_qty}).eq(
-            "user_email", email
-        ).eq("fitting_name", name).execute()
-    else:
-        new_qty = 1 if action == "plus" else 0
-        supabase.table("user_stock").insert(
-            {"user_email": email, "fitting_name": name, "quantity": new_qty}
+    quantity = 0
+    if user_stock_resp.data:
+        quantity = user_stock_resp.data[0]["quantity"]
+
+    # Handle update
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "increase":
+            quantity += 1
+        elif action == "decrease" and quantity > 0:
+            quantity -= 1
+
+        # Upsert ensures it creates or updates
+        supabase.table("user_stock").upsert(
+            {
+                "fitting_id": fitting_id,
+                "fitting_name": item_name,
+                "user_email": user_email,
+                "quantity": quantity,
+            }
         ).execute()
 
-    return redirect(url_for("scan", item_name=name))
-
+    return render_template("scan.html", item=fitting, quantity=quantity)
 
 # ========= Admin dashboard =========
 @app.route("/admin")

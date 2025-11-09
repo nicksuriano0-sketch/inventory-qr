@@ -1,34 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="mb-3">Scanned Item</h2>
-<div class="bg-white p-3 rounded shadow-sm text-center">
-  <h4 class="fw-bold mb-2">{{ item.name }}</h4>
-  <p class="text-muted mb-2">{{ item.category }}</p>
+<div class="container mt-4 text-center">
+  <h3>{{ item.name }}</h3>
+  <p class="text-muted">{{ item.category }}</p>
+  <h4>Quantity: <span class="badge bg-info">{{ quantity }}</span></h4>
 
-  <div class="my-3">
-    <button class="btn btn-danger btn-lg" onclick="updateQty(-1)">−</button>
-    <span id="qty" class="fs-3 mx-3">{{ item.quantity or 0 }}</span>
-    <button class="btn btn-success btn-lg" onclick="updateQty(1)">+</button>
-  </div>
+  <form method="POST" class="d-flex justify-content-center gap-2 mt-3">
+    <button name="action" value="decrease" class="btn btn-danger">−</button>
+    <button name="action" value="increase" class="btn btn-success">+</button>
+  </form>
 
-  <p class="text-secondary small mt-3">Tap + or − to adjust quantity.</p>
+  <a href="{{ url_for('index') }}" class="btn btn-link mt-3">Back to Inventory</a>
 </div>
-
-<script>
-function updateQty(change) {
-  fetch("/update_quantity", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: "{{ item.id }}", change })
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) {
-      document.getElementById("qty").textContent = d.quantity;
-    } else {
-      alert(d.error || "Error updating quantity");
-    }
-  });
-}
-</script>
 {% endblock %}
