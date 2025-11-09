@@ -109,48 +109,43 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.route("/add_item", methods=["GET", "POST"])
-def add_item():
-    user_id = get_user_id()
-    if not user_id:
-        return redirect(url_for("login"))
-
-    if request.method == "POST":
-        name = request.form["name"]
-        category = request.form["category"]
-
-        try:
-            # Create QR code
-            qr_url = f"{RENDER_URL}/scan/{name}"
-            qr_img = qrcode.make(qr_url)
-            buffer = BytesIO()
-            qr_img.save(buffer, format="PNG")
-            qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-            # Insert into Supabase
-            supabase.table("fittings").insert({
-                "name": name,
-                "category": category,
-                "qr_code": qr_base64
-            }).execute()
-
-            flash("Item added successfully!")
-            return redirect(url_for("index"))
-        except Exception as e:
-            flash(f"Error adding item: {e}")
-    return render_template("add_item.html")
-
-
 @app.route("/scan/<name>", methods=["GET", "POST"])
 def scan(name):
     user_id = get_user_id()
     if not user_id:
         return redirect(url_for("login"))
 
-    # Fetch the fitting by name (handles duplicates)
+    # Fetch the fitting by name (handles duplicates safely)
     fitting_data = supabase.table("fittings").select("*").eq("name", name).execute().data
-    fitting = fitting_data[0] if
+    fitting = fitting_data[0] if fitting_data else None
 
+    if not fitting:
+        flash("Item not found.")
+        return redirect(url_for("index"))
+
+    # Get user's stock quantity for this fitting
+    stock_resp = supabase.table("user_stock").select("*").eq("user_id", user_id).eq("fitting_id", fitting["id"]).execute()
+    current_qty = stock_resp.data[0]["quantity"] if stock_resp.data else 0
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        new_qty = current_qty + 1 if action == "increase" else max(current_qty - 1, 0)
+
+        # Check if record exists and update or insert
+        if stock_resp.data:
+            supabase.table("user_stock").update({"quantity": new_qty}) \
+                .eq("user_id", user_id).eq("fitting_id", fitting["id"]).execute()
+        else:
+            supabase.table("user_stock").insert({
+                "user_id": user_id,
+                "fitting_id": fitting["id"],
+                "quantity": new_qty
+            }).execute()
+
+        flash("Quantity updated.")
+        return redirect(url_for("scan", name=name))
+
+    return render_template("scan.html", fitting=fitting, quantity=current_qty)
 
     if not fitting:
         flash("Item not found.")
