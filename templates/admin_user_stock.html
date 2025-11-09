@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Stock for {{ user_email }}</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Fitting</th>
+        <th>Quantity</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in stock %}
+      <tr>
+        <td>{{ s.fitting_name }}</td>
+        <td>{{ s.quantity }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a href="{{ url_for('admin_dashboard') }}" class="btn btn-link">Back to Dashboard</a>
+</div>
+{% endblock %}

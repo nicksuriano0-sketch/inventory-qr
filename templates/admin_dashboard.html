@@ -2,21 +2,15 @@
 {% block content %}
 <div class="container mt-4">
   <h2>Admin Dashboard</h2>
-  <table class="table table-striped">
-    <thead>
-      <tr><th>Email</th><th>Admin</th><th>Action</th></tr>
-    </thead>
-    <tbody>
-      {% for u in users %}
-      <tr>
-        <td>{{ u.email }}</td>
-        <td>{{ "Yes" if u.is_admin else "No" }}</td>
-        <td>
-          <a href="{{ url_for('view_user_stock', user_id=u.id) }}" class="btn btn-sm btn-primary">View Stock</a>
-        </td>
-      </tr>
+  <form method="get" class="mb-4">
+    <label for="userSelect">Select User:</label>
+    <select id="userSelect" class="form-select" onchange="if(this.value) window.location.href='/admin/view/' + this.value;">
+      <option value="">-- Choose a User --</option>
+      {% for user in users %}
+      <option value="{{ user }}">{{ user }}</option>
       {% endfor %}
-    </tbody>
-  </table>
+    </select>
+  </form>
+  <a href="{{ url_for('add_item') }}" class="btn btn-primary">Add New Fitting</a>
 </div>
 {% endblock %}
