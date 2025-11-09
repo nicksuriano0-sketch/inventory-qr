@@ -147,9 +147,10 @@ def scan(name):
     if not user_id:
         return redirect(url_for("login"))
 
-    # Fetch the fitting by name
+    # Fetch the fitting by name (handles duplicates)
     fitting_data = supabase.table("fittings").select("*").eq("name", name).execute().data
-    fitting = fitting_data[0] if fitting_data else None
+    fitting = fitting_data[0] if
+
 
     if not fitting:
         flash("Item not found.")
