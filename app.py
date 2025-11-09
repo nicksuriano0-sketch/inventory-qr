@@ -209,3 +209,30 @@ def admin_user_stock(user_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+@app.route("/admin")
+def admin_dashboard():
+    user = supabase.auth.get_user()
+    if not user or user.user.email != "youradminemail@example.com":  # your admin email
+        flash("Unauthorized access")
+        return redirect(url_for("index"))
+
+    users = supabase.table("users").select("id, email, is_admin").execute().data
+    return render_template("admin_dashboard.html", users=users)
+
+
+@app.route("/admin/user/<user_id>")
+def view_user_stock(user_id):
+    user = supabase.auth.get_user()
+    if not user or user.user.email != "youradminemail@example.com":
+        flash("Unauthorized access")
+        return redirect(url_for("index"))
+
+    # Join user_stock with fittings to show item names and quantities
+    response = supabase.rpc(
+        "get_user_stock_details",
+        {"uid": user_id}
+    ).execute()
+
+    stock = response.data if response.data else []
+    return render_template("view_user_stock.html", stock=stock)

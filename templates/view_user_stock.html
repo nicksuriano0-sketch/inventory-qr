@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2>User Stock</h2>
+  {% if stock %}
+  <table class="table table-hover">
+    <thead>
+      <tr><th>Fitting</th><th>Category</th><th>Quantity</th></tr>
+    </thead>
+    <tbody>
+      {% for s in stock %}
+      <tr>
+        <td>{{ s.fitting_name }}</td>
+        <td>{{ s.category }}</td>
+        <td>{{ s.quantity }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No stock data available for this user.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,11 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Admin Dashboard</h2>
-<ul class="list-group">
-  {% for user in users %}
-  <li class="list-group-item">
-    <a href="{{ url_for('admin_user_stock', user_id=user.id) }}">{{ user.email }}</a>
-  </li>
-  {% endfor %}
-</ul>
+<div class="container mt-4">
+  <h2>Admin Dashboard</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Email</th><th>Admin</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.email }}</td>
+        <td>{{ "Yes" if u.is_admin else "No" }}</td>
+        <td>
+          <a href="{{ url_for('view_user_stock', user_id=u.id) }}" class="btn btn-sm btn-primary">View Stock</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
