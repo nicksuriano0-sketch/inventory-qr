@@ -148,53 +148,51 @@ def add_item():
 
 
 # ========= Scanning / Per-user quantities =========
-@app.route("/scan/<item_name>", methods=["GET", "POST"])
-def scan(item_name):
-    if "user" not in session:
+@app.route("/scan/<name>", methods=["GET", "POST"])
+def scan(name):
+    user = supabase.auth.get_user()
+    if not user or not user.user:
+        flash("You must be logged in to adjust stock.", "error")
         return redirect(url_for("login"))
 
-    user_email = session.get("email")
+    user_id = user.user.id
+    user_email = user.user.email
 
-    # Fetch fitting
-    fitting_resp = supabase.table("fittings").select("*").eq("name", item_name).execute()
-    if not fitting_resp.data:
-        flash("Item not found.")
+    fitting = supabase.table("fittings").select("*").eq("name", name).single().execute().data
+    if not fitting:
+        flash("Item not found.", "error")
         return redirect(url_for("index"))
-    fitting = fitting_resp.data[0]
-    fitting_id = fitting["id"]
 
-    # Get or initialize user's stock entry
-    user_stock_resp = (
+    # Fetch current stock for this user + fitting
+    stock_data = (
         supabase.table("user_stock")
-        .select("*")
-        .eq("fitting_id", fitting_id)
-        .eq("user_email", user_email)
+        .select("quantity")
+        .eq("user_id", user_id)
+        .eq("fitting_id", fitting["id"])
         .execute()
     )
 
-    quantity = 0
-    if user_stock_resp.data:
-        quantity = user_stock_resp.data[0]["quantity"]
+    current_qty = 0
+    if stock_data.data:
+        current_qty = stock_data.data[0]["quantity"]
 
-    # Handle update
     if request.method == "POST":
         action = request.form.get("action")
-        if action == "increase":
-            quantity += 1
-        elif action == "decrease" and quantity > 0:
-            quantity -= 1
+        new_qty = current_qty + 1 if action == "plus" else max(0, current_qty - 1)
 
-        # Upsert ensures it creates or updates
-        supabase.table("user_stock").upsert(
-            {
-                "fitting_id": fitting_id,
-                "fitting_name": item_name,
-                "user_email": user_email,
-                "quantity": quantity,
-            }
-        ).execute()
+        # Insert or update this user's stock entry
+        supabase.table("user_stock").upsert({
+            "user_id": user_id,
+            "user_email": user_email,
+            "fitting_id": fitting["id"],
+            "fitting_name": fitting["name"],
+            "quantity": new_qty
+        }).execute()
 
-    return render_template("scan.html", item=fitting, quantity=quantity)
+        current_qty = new_qty
+
+    return render_template("scan.html", fitting=fitting, quantity=current_qty)
+
 
 # ========= Admin dashboard =========
 @app.route("/admin")
